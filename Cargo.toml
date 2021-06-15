@@ -1,0 +1,13 @@
+[package]
+name = "hwm"
+version = "0.1.0"
+edition = "2018"
+authors = ["Heiko Riemer <mail@eheiko.net>"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+penrose = "0.2"
+simplelog = "0.8"
+tracing = "0.1"
+tracing-subscriber = "0.2"
