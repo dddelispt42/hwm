@@ -12,7 +12,7 @@ extern crate penrose;
 use penrose::{
     contrib::{
         extensions::Scratchpad,
-        hooks::{DefaultWorkspace, LayoutSymbolAsRootName},
+        hooks::{ActiveClientAsRootName, ClientSpawnRules, DefaultWorkspace, SpawnRule},
         layouts::paper,
     },
     core::{
@@ -57,7 +57,10 @@ fn main() -> Result<()> {
         .floating_classes(vec!["dmenu", "dunst", "polybar", "rofi"])
         // Client border colors are set based on X focus
         .border_px(4)
-        .focused_border(0xcc241d)
+        .gap_px(0)
+        .top_bar(true)
+        .bar_height(31)
+        .focused_border(0xa2c000)
         .unfocused_border(0x3c3836);
 
     // When specifying a layout, most of the time you will want LayoutConf::default() as shown
@@ -91,7 +94,7 @@ fn main() -> Result<()> {
     let config = config_builder.build().unwrap();
 
     // NOTE: change these to programs that you have installed!
-    let my_program_launcher = "rofi -show drun";
+    let my_program_launcher = "rofi -show combi";
     let my_file_manager = "st -e lf";
     let my_terminal = "st";
     let my_browser = "brave";
@@ -111,16 +114,42 @@ fn main() -> Result<()> {
     // Using a simple contrib hook that takes no config. By convention, contrib hooks have a 'new'
     // method that returns a boxed instance of the hook with any configuration performed so that it
     // is ready to push onto the corresponding *_hooks vec.
-    hooks.push(LayoutSymbolAsRootName::new());
+    hooks.push(ActiveClientAsRootName::new());
 
     // Here we are using a contrib hook that requires configuration to set up a default workspace
     // on workspace "9". This will set the layout and spawn the supplied programs if we make
     // workspace "9" active while it has no clients.
     hooks.push(DefaultWorkspace::new(
-        "9",
-        "[botm]",
-        vec![my_terminal, my_terminal, my_file_manager],
+        "1",
+        "[side]",
+        vec!["st -c \"st - heiko@ed\" -T \"st - heiko@ed\""],
     ));
+    hooks.push(DefaultWorkspace::new(
+        "2",
+        "[side]",
+        vec!["st -c \"st - heiko@localhost\" -T \"st - heiko@localhost\""],
+    ));
+    hooks.push(DefaultWorkspace::new(
+        "3",
+        "[side]",
+        vec!["st -c \"st - heiko@lab\" -T \"st - heiko@lab\""],
+    ));
+    hooks.push(DefaultWorkspace::new("4", "[side]", vec!["firefox"]));
+    hooks.push(DefaultWorkspace::new("5", "[side]", vec!["signal-desktop"]));
+    hooks.push(DefaultWorkspace::new("6", "[side]", vec![my_browser]));
+
+    // spawn rules
+    hooks.push(ClientSpawnRules::new(vec![
+        SpawnRule::ClassName("brave-browser", 6),
+        SpawnRule::ClassName("firefox", 4),
+        SpawnRule::ClassName("gimp", 9),
+        SpawnRule::ClassName("signal-desktop", 5),
+        SpawnRule::ClassName("thunderbird", 4),
+        SpawnRule::WMName("Anki", 3),
+        SpawnRule::WMName("st - heiko@ed", 1),
+        SpawnRule::WMName("st - heiko@lab", 3),
+        SpawnRule::WMName("st - heiko@localhost", 2),
+    ]));
 
     // Scratchpad is an extension: it makes use of the same Hook points as the examples above but
     // additionally provides a 'toggle' method that can be bound to a key combination in order to
@@ -185,12 +214,6 @@ fn main() -> Result<()> {
         "M-x" => run_internal!(detect_screens);
         "M-A-Escape" => run_internal!(exit);
 
-        // Each keybinding here will be templated in with the workspace index of each workspace,
-        // allowing for common workspace actions to be bound at once.
-        // map: { "1", "2", "3", "4", "5", "6", "7", "8", "9" } to index_selectors(9) => {
-        //     "M-{}" => focus_workspace (REF);
-        //     "M-S-{}" => client_to_workspace (REF);
-        // };
         refmap [ config.ws_range() ] in {
             "M-{}" => focus_workspace [ index_selectors(config.workspaces().len()) ];
             "M-S-{}" => client_to_workspace [ index_selectors(config.workspaces().len()) ];
