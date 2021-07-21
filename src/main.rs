@@ -119,23 +119,24 @@ fn main() -> Result<()> {
     // Here we are using a contrib hook that requires configuration to set up a default workspace
     // on workspace "9". This will set the layout and spawn the supplied programs if we make
     // workspace "9" active while it has no clients.
-    hooks.push(DefaultWorkspace::new(
-        "1",
-        "[side]",
-        vec!["st -c \"st - heiko@ed\" -T \"st - heiko@ed\""],
-    ));
-    hooks.push(DefaultWorkspace::new(
-        "2",
-        "[side]",
-        vec!["st -c \"st - heiko@localhost\" -T \"st - heiko@localhost\""],
-    ));
-    hooks.push(DefaultWorkspace::new(
-        "3",
-        "[side]",
-        vec!["st -c \"st - heiko@lab\" -T \"st - heiko@lab\""],
-    ));
-    hooks.push(DefaultWorkspace::new("4", "[side]", vec![my_browser]));
-    hooks.push(DefaultWorkspace::new("5", "[side]", vec!["signal-desktop"]));
+    // hooks.push(DefaultWorkspace::new(
+    //     "1",
+    //     "[side]",
+    //     vec!["st -c \"st - heiko@ed\" -T \"st - heiko@ed\""],
+    // ));
+    // hooks.push(DefaultWorkspace::new(
+    //     "2",
+    //     "[side]",
+    //     vec!["st -c \"st - heiko@localhost\" -T \"st - heiko@localhost\""],
+    // ));
+    // hooks.push(DefaultWorkspace::new(
+    //     "3",
+    //     "[side]",
+    //     vec!["st -c \"st - heiko@lab\" -T \"st - heiko@lab\""],
+    // ));
+    // hooks.push(DefaultWorkspace::new("4", "[side]", vec!["firefox"]));
+    // hooks.push(DefaultWorkspace::new("5", "[side]", vec!["signal-desktop"]));
+    // hooks.push(DefaultWorkspace::new("6", "[side]", vec![my_browser]));
 
     // spawn rules
     hooks.push(ClientSpawnRules::new(vec![
