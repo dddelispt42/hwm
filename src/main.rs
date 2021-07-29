@@ -134,13 +134,12 @@ fn main() -> Result<()> {
         "[side]",
         vec!["st -c \"st - heiko@lab\" -T \"st - heiko@lab\""],
     ));
-    hooks.push(DefaultWorkspace::new("4", "[side]", vec!["firefox"]));
+    hooks.push(DefaultWorkspace::new("4", "[side]", vec![my_browser]));
     hooks.push(DefaultWorkspace::new("5", "[side]", vec!["signal-desktop"]));
-    hooks.push(DefaultWorkspace::new("6", "[side]", vec![my_browser]));
 
     // spawn rules
     hooks.push(ClientSpawnRules::new(vec![
-        SpawnRule::ClassName("brave-browser", 6),
+        SpawnRule::ClassName("brave-browser", 4),
         SpawnRule::ClassName("firefox", 4),
         SpawnRule::ClassName("gimp", 9),
         SpawnRule::ClassName("signal-desktop", 5),
