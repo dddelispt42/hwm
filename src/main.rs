@@ -12,7 +12,7 @@ extern crate penrose;
 use penrose::{
     contrib::{
         extensions::Scratchpad,
-        hooks::{ActiveClientAsRootName, ClientSpawnRules, DefaultWorkspace, SpawnRule},
+        hooks::{ActiveClientAsRootName, ClientSpawnRules, SpawnRule},
         layouts::paper,
     },
     core::{
@@ -185,6 +185,7 @@ fn main() -> Result<()> {
         // applications
         "M-S-q" => run_external!("exit_menu");
         "M-c" => run_external!("clipmenu");
+        "M-S-c" => run_external!("clipmenu");
         "M-w" => run_external!(my_browser);
         "M-b" => run_external!("bluetooth_menu");
         "M-m" => run_external!("pulsemixer");
