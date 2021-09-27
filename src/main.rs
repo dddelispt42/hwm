@@ -140,15 +140,17 @@ fn main() -> Result<()> {
 
     // spawn rules
     hooks.push(ClientSpawnRules::new(vec![
+        SpawnRule::ClassName("Tor Browser", 1),
         SpawnRule::ClassName("brave-browser", 4),
         SpawnRule::ClassName("firefox", 4),
         SpawnRule::ClassName("gimp", 9),
-        SpawnRule::ClassName("signal-desktop", 5),
-        SpawnRule::ClassName("thunderbird", 4),
-        SpawnRule::WMName("Anki", 3),
-        SpawnRule::WMName("st - heiko@ed", 1),
-        SpawnRule::WMName("st - heiko@lab", 3),
-        SpawnRule::WMName("st - heiko@localhost", 2),
+        SpawnRule::ClassName("signal", 5),
+        SpawnRule::ClassName("Thunderbird", 4),
+        SpawnRule::ClassName("anki", 3),
+        SpawnRule::WMName("st - heiko@ed", 2),
+        SpawnRule::WMName("st - heiko@ed2", 2),
+        SpawnRule::WMName("st - heiko@backup", 2),
+        SpawnRule::WMName("st - heiko@localhost", 1),
     ]));
 
     // Scratchpad is an extension: it makes use of the same Hook points as the examples above but
@@ -156,6 +158,10 @@ fn main() -> Result<()> {
     // trigger the bound scratchpad client.
     let sp = Scratchpad::new("st", 0.8, 0.8);
     hooks.push(sp.get_hook());
+    let sp2 = Scratchpad::new("st", 0.8, 0.8);
+    hooks.push(sp2.get_hook());
+    let sp3 = Scratchpad::new("st", 0.8, 0.8);
+    hooks.push(sp3.get_hook());
 
     /* The gen_keybindings macro parses user friendly key binding definitions into X keycodes and
      * modifier masks. It uses the 'xmodmap' program to determine your current keymap and create
@@ -173,6 +179,8 @@ fn main() -> Result<()> {
         "M-Return" => run_external!(my_terminal);
         "M-S-f" => run_external!(my_file_manager);
         "M-S-Return" => sp.toggle();
+        "M-C-Return" => sp2.toggle();
+        "M-A-Return" => sp3.toggle();
 
         // client management
         "M-j" => run_internal!(cycle_client, Forward);
@@ -184,8 +192,8 @@ fn main() -> Result<()> {
 
         // applications
         "M-S-q" => run_external!("exit_menu");
-        "M-c" => run_external!("clipmenu");
-        "M-S-c" => run_external!("clipmenu");
+        // "M-c" => run_external!("st -e clipmenu");
+        "M-c" => run_external!("CM_LAUNCHER=rofi clipmenu");
         "M-w" => run_external!(my_browser);
         "M-b" => run_external!("bluetooth_menu");
         "M-m" => run_external!("pulsemixer");
@@ -213,6 +221,7 @@ fn main() -> Result<()> {
         "M-A-Left" => run_internal!(update_main_ratio, Less);
 
         "M-x" => run_internal!(detect_screens);
+        "M-S-x" => run_external!("xrandr.sh");
         "M-A-Escape" => run_internal!(exit);
 
         refmap [ config.ws_range() ] in {
