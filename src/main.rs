@@ -140,17 +140,17 @@ fn main() -> Result<()> {
 
     // spawn rules
     hooks.push(ClientSpawnRules::new(vec![
-        SpawnRule::ClassName("Tor Browser", 1),
-        SpawnRule::ClassName("brave-browser", 4),
-        SpawnRule::ClassName("firefox", 4),
-        SpawnRule::ClassName("gimp", 9),
-        SpawnRule::ClassName("signal", 5),
-        SpawnRule::ClassName("Thunderbird", 4),
-        SpawnRule::ClassName("anki", 3),
-        SpawnRule::WMName("st - heiko@ed", 2),
-        SpawnRule::WMName("st - heiko@ed2", 2),
-        SpawnRule::WMName("st - heiko@backup", 2),
-        SpawnRule::WMName("st - heiko@localhost", 1),
+        SpawnRule::ClassName("Tor Browser", 0),
+        SpawnRule::ClassName("brave-browser", 3),
+        SpawnRule::ClassName("firefox", 3),
+        SpawnRule::ClassName("gimp", 8),
+        SpawnRule::ClassName("signal", 4),
+        SpawnRule::ClassName("Thunderbird", 3),
+        SpawnRule::ClassName("anki", 2),
+        SpawnRule::WMName("st - heiko@ed", 1),
+        SpawnRule::WMName("st - heiko@ed2", 1),
+        SpawnRule::WMName("st - heiko@backup", 1),
+        SpawnRule::WMName("st - heiko@localhost", 0),
     ]));
 
     // Scratchpad is an extension: it makes use of the same Hook points as the examples above but
