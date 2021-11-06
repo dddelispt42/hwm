@@ -54,7 +54,7 @@ fn main() -> Result<()> {
     config_builder
         .workspaces(vec!["1", "2", "3", "4", "5", "6", "7", "8", "9"])
         // Windows with a matching WM_CLASS will always float
-        .floating_classes(vec!["dmenu", "dunst", "polybar", "rofi"])
+        .floating_classes(vec!["dmenu", "dunst", "polybar", "rofi", "pinentry-gtk-2"])
         // Client border colors are set based on X focus
         .border_px(4)
         .gap_px(0)
