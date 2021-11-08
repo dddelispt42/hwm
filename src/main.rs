@@ -237,6 +237,7 @@ fn main() -> Result<()> {
     // details of the required methods and expected behaviour and xcb/xconn.rs for the
     // implementation of XcbConnection.
     let conn = XcbConnection::new()?;
+    conn.set_root_window_name("HWM - Heiko Window Manager in Rust");
 
     // Create the WindowManager instance with the config we have built and a connection to the X
     // server. Before calling grab_keys_and_run, it is possible to run additional start-up actions
