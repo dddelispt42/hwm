@@ -229,7 +229,7 @@ fn main() -> Result<()> {
         "M-A-Left" => run_internal!(update_main_ratio, Less);
 
         "M-x" => run_internal!(detect_screens);
-        "M-S-x" => run_external!("xrandr.sh");
+        "M-S-x" => run_external!("xrandr_menu");
         "M-A-Escape" => run_internal!(exit);
 
         refmap [ config.ws_range() ] in {
