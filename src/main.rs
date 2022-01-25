@@ -55,20 +55,22 @@ fn main() -> Result<()> {
         .workspaces(vec!["1", "2", "3", "4", "5", "6", "7", "8", "9"])
         // Windows with a matching WM_CLASS will always float
         .floating_classes(vec![
+            "Xnest",
+            "copyq",
             "dmenu",
             "dunst",
+            "onboard",
+            "pinentry-gtk-2",
             "polybar",
             "rofi",
-            "Xnest",
-            "pinentry-gtk-2",
         ])
         // Client border colors are set based on X focus
         .border_px(4)
         .gap_px(0)
         .top_bar(true)
         .bar_height(31)
-        .focused_border(0xa2c000)
-        .unfocused_border(0x3c3836);
+        .focused_border(0x458588)
+        .unfocused_border(0x282828);
 
     // When specifying a layout, most of the time you will want LayoutConf::default() as shown
     // below, which will honour gap settings and will not be run on focus changes (only when
