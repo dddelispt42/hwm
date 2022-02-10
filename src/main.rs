@@ -107,7 +107,7 @@ fn main() -> Result<()> {
     let my_program_launcher = "rofi -show combi";
     let my_terminal = "alacritty";
     let my_file_manager = "alacritty -e lf";
-    let my_browser = "brave";
+    let my_browser = "qutebrowser";
 
     /* hooks
      *
@@ -155,6 +155,7 @@ fn main() -> Result<()> {
         SpawnRule::ClassName("firefox", 3),
         SpawnRule::ClassName("gimp", 8),
         SpawnRule::ClassName("signal", 4),
+        SpawnRule::ClassName("qutebrowser", 4),
         SpawnRule::ClassName("Thunderbird", 3),
         SpawnRule::ClassName("anki", 2),
         SpawnRule::WMName("alacritty - heiko@ed", 1),
