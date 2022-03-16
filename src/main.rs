@@ -1,10 +1,6 @@
 /**
- * penrose :: example configuration
- *
- * penrose does not have a traditional configuration file and is not typically set up by patching
- * the source code: it is more like Xmonad or Qtile in the sense that it is really a library for
- * writing your own window manager. Below is an example main.rs that can serve as a template should
- * you decide to write your own WM using penrose.
+* My personal minimal X.org Tiling Window Manager written in Rust.
+* Author: Heiko Riemer - mail@eheiko.net
  */
 #[macro_use]
 extern crate penrose;
@@ -130,19 +126,19 @@ fn main() -> Result<()> {
     // on workspace "9". This will set the layout and spawn the supplied programs if we make
     // workspace "9" active while it has no clients.
     // hooks.push(DefaultWorkspace::new(
-    //     "1",
-    //     "[side]",
-    //     vec!["st -c \"st - heiko@ed\" -T \"st - heiko@ed\""],
+    //	 "1",
+    //	 "[side]",
+    //	 vec!["st -c \"st - heiko@ed\" -T \"st - heiko@ed\""],
     // ));
     // hooks.push(DefaultWorkspace::new(
-    //     "2",
-    //     "[side]",
-    //     vec!["st -c \"st - heiko@localhost\" -T \"st - heiko@localhost\""],
+    //	 "2",
+    //	 "[side]",
+    //	 vec!["st -c \"st - heiko@localhost\" -T \"st - heiko@localhost\""],
     // ));
     // hooks.push(DefaultWorkspace::new(
-    //     "3",
-    //     "[side]",
-    //     vec!["st -c \"st - heiko@lab\" -T \"st - heiko@lab\""],
+    //	 "3",
+    //	 "[side]",
+    //	 vec!["st -c \"st - heiko@lab\" -T \"st - heiko@lab\""],
     // ));
     // hooks.push(DefaultWorkspace::new("4", "[side]", vec!["firefox"]));
     // hooks.push(DefaultWorkspace::new("5", "[side]", vec!["signal-desktop"]));
@@ -184,61 +180,61 @@ fn main() -> Result<()> {
      * and instead spawns a new child process.
      */
     let key_bindings = gen_keybindings! {
-        // Program launch
-        "M-semicolon" => run_external!(my_program_launcher);
-        "M-d" => run_external!(my_program_launcher);
-        "M-Return" => run_external!(my_terminal);
-        "M-S-f" => run_external!(my_file_manager);
-        "M-S-Return" => sp.toggle();
-        "M-C-Return" => sp2.toggle();
-        "M-A-Return" => sp3.toggle();
+         // Program launch
+         "M-semicolon" => run_external!(my_program_launcher);
+         "M-d" => run_external!(my_program_launcher);
+         "M-Return" => run_external!(my_terminal);
+         "M-S-f" => run_external!(my_file_manager);
+         "M-S-Return" => sp.toggle();
+         "M-C-Return" => sp2.toggle();
+         "M-A-Return" => sp3.toggle();
 
-        // client management
-        "M-j" => run_internal!(cycle_client, Forward);
-        "M-k" => run_internal!(cycle_client, Backward);
-        "M-S-j" => run_internal!(drag_client, Forward);
-        "M-S-k" => run_internal!(drag_client, Backward);
-        "M-q" => run_internal!(kill_client);
-        "M-f" => run_internal!(toggle_client_fullscreen, &Selector::Focused);
+         // client management
+         "M-j" => run_internal!(cycle_client, Forward);
+         "M-k" => run_internal!(cycle_client, Backward);
+         "M-S-j" => run_internal!(drag_client, Forward);
+         "M-S-k" => run_internal!(drag_client, Backward);
+         "M-q" => run_internal!(kill_client);
+         "M-f" => run_internal!(toggle_client_fullscreen, &Selector::Focused);
 
-        // applications
-        "M-S-q" => run_external!("exit_menu");
-        // "M-c" => run_external!("st -e clipmenu");
-        "M-c" => run_external!("CM_LAUNCHER=rofi clipmenu");
-        "M-w" => run_external!(my_browser);
-        "M-b" => run_external!("bluetooth_menu");
-        "M-m" => run_external!("pulsemixer");
-        "M-period" => run_external!("rofimenu");
-        "M-S-period" => run_external!("nerdfont_menu");
-        "M-Print" => run_external!("screenshot_menu");
-        "M-S-Print" => run_external!("screenshot_menu -s");
-        // "M-S-w" => run_external!(format!("{} -e sudo nmtui", TERMINAL));
-        // "M-r" => run_external!(format!("{} -e lf", TERMINAL));
-        // "M-S-r" => run_external!(format!("{} -e htop", TERMINAL));
+         // applications
+         "M-S-q" => run_external!("exit_menu");
+         // "M-c" => run_external!("st -e clipmenu");
+         "M-c" => run_external!("CM_LAUNCHER=rofi clipmenu");
+         "M-w" => run_external!(my_browser);
+         "M-b" => run_external!("bluetooth_menu");
+         "M-m" => run_external!("pulsemixer");
+         "M-period" => run_external!("rofimenu");
+         "M-S-period" => run_external!("nerdfont_menu");
+         "M-Print" => run_external!("screenshot_menu");
+         "M-S-Print" => run_external!("screenshot_menu -s");
+         // "M-S-w" => run_external!(format!("{} -e sudo nmtui", TERMINAL));
+         // "M-r" => run_external!(format!("{} -e lf", TERMINAL));
+         // "M-S-r" => run_external!(format!("{} -e htop", TERMINAL));
 
-        // workspace management
-        "M-Tab" => run_internal!(toggle_workspace);
-        "M-p" => run_internal!(cycle_screen, Forward);
-        "M-n" => run_internal!(cycle_screen, Backward);
-        "M-S-p" => run_internal!(drag_workspace, Forward);
-        "M-S-n" => run_internal!(drag_workspace, Backward);
+         // workspace management
+         "M-Tab" => run_internal!(toggle_workspace);
+         "M-p" => run_internal!(cycle_screen, Forward);
+         "M-n" => run_internal!(cycle_screen, Backward);
+         "M-S-p" => run_internal!(drag_workspace, Forward);
+         "M-S-n" => run_internal!(drag_workspace, Backward);
 
-        // Layout management
-        "M-l" => run_internal!(cycle_layout, Forward);
-        "M-S-l" => run_internal!(cycle_layout, Backward);
-        "M-A-Up" => run_internal!(update_max_main, More);
-        "M-A-Down" => run_internal!(update_max_main, Less);
-        "M-A-Right" => run_internal!(update_main_ratio, More);
-        "M-A-Left" => run_internal!(update_main_ratio, Less);
+         // Layout management
+         "M-l" => run_internal!(cycle_layout, Forward);
+         "M-S-l" => run_internal!(cycle_layout, Backward);
+         "M-A-Up" => run_internal!(update_max_main, More);
+         "M-A-Down" => run_internal!(update_max_main, Less);
+         "M-A-Right" => run_internal!(update_main_ratio, More);
+         "M-A-Left" => run_internal!(update_main_ratio, Less);
 
-        "M-x" => run_internal!(detect_screens);
-        "M-S-x" => run_external!("xrandr_menu");
-        "M-A-Escape" => run_internal!(exit);
+         "M-x" => run_internal!(detect_screens);
+         "M-S-x" => run_external!("xrandr_menu");
+         "M-A-Escape" => run_internal!(exit);
 
-        refmap [ config.ws_range() ] in {
-            "M-{}" => focus_workspace [ index_selectors(config.workspaces().len()) ];
-            "M-S-{}" => client_to_workspace [ index_selectors(config.workspaces().len()) ];
-        };
+         refmap [ config.ws_range() ] in {
+               "M-{}" => focus_workspace [ index_selectors(config.workspaces().len()) ];
+               "M-S-{}" => client_to_workspace [ index_selectors(config.workspaces().len()) ];
+         };
 
     };
 
@@ -248,7 +244,7 @@ fn main() -> Result<()> {
     // details of the required methods and expected behaviour and xcb/xconn.rs for the
     // implementation of XcbConnection.
     let conn = XcbConnection::new()?;
-    conn.set_root_window_name("HWM - Heiko Window Manager in Rust");
+    conn.set_root_window_name("HWM - Heiko's X Window Manager in Rust");
 
     // Create the WindowManager instance with the config we have built and a connection to the X
     // server. Before calling grab_keys_and_run, it is possible to run additional start-up actions
@@ -258,8 +254,8 @@ fn main() -> Result<()> {
     wm.init()?;
 
     // NOTE: If you are using the default XCB backend provided in the penrose xcb module, then the
-    //       construction of the XcbConnection and resulting WindowManager can be done using the
-    //       new_xcb_backed_window_manager helper function like so:
+    //		construction of the XcbConnection and resulting WindowManager can be done using the
+    //		new_xcb_backed_window_manager helper function like so:
     //
     // let mut wm = new_xcb_backed_window_manager(config)?;
 
