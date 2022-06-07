@@ -12,29 +12,32 @@ use penrose::{
         layouts::paper,
     },
     core::{
-        client::Client,
         config::Config,
-        helpers::{index_selectors, spawn},
+        helpers::spawn,
         hooks::Hook,
         layout::{bottom_stack, monocle, side_stack, Layout, LayoutConf},
         manager::WindowManager,
         ring::Selector,
-        xconnection::XConn,
+        xconnection::{XConn, Xid},
     },
     logging_error_handler,
     xcb::{XcbConnection, XcbHooks},
     Backward, Forward, Less, More, Result,
+    __test_helpers::index_selectors,
 };
 
 use simplelog::{LevelFilter, SimpleLogger};
 use std::collections::HashMap;
+use tracing::info;
 
 // An example of a simple custom hook. In this case we are creating a NewClientHook which will
 // be run each time a new client program is spawned.
 struct MyClientHook {}
 impl<X: XConn> Hook<X> for MyClientHook {
-    fn new_client(&mut self, wm: &mut WindowManager<X>, c: &mut Client) -> Result<()> {
-        wm.log(&format!("new client with WM_CLASS='{}'", c.wm_class()))
+    fn new_client(&mut self, wm: &mut WindowManager<X>, id: Xid) -> Result<()> {
+        let c = wm.client(&Selector::WinId(id)).unwrap();
+        info!("new client with WM_CLASS='{}'", c.wm_class());
+        Ok(())
     }
 }
 
@@ -65,8 +68,10 @@ fn main() -> Result<()> {
         .gap_px(0)
         .top_bar(true)
         .bar_height(31)
-        .focused_border(0x458588)
-        .unfocused_border(0x282828);
+        .focused_border("#458588")
+        .expect("could not set focus border color")
+        .unfocused_border("#282828")
+        .expect("could not set unfocus border color");
 
     // When specifying a layout, most of the time you will want LayoutConf::default() as shown
     // below, which will honour gap settings and will not be run on focus changes (only when
@@ -231,10 +236,14 @@ fn main() -> Result<()> {
          "M-S-x" => run_external!("xrandr_menu");
          "M-A-Escape" => run_internal!(exit);
 
-         refmap [ config.ws_range() ] in {
-               "M-{}" => focus_workspace [ index_selectors(config.workspaces().len()) ];
-               "M-S-{}" => client_to_workspace [ index_selectors(config.workspaces().len()) ];
-         };
+         // refmap [ config.ws_range() ] in {
+         //       "M-{}" => focus_workspace [ index_selectors(config.workspaces().len()) ];
+         //       "M-S-{}" => client_to_workspace [ index_selectors(config.workspaces().len()) ];
+         // };
+         map: { "1", "2", "3", "4", "5", "6", "7", "8", "9" } to index_selectors(9) => {
+            "M-{}" => focus_workspace (REF);
+            "M-S-{}" => client_to_workspace (REF);
+        };
 
     };
 
@@ -244,7 +253,8 @@ fn main() -> Result<()> {
     // details of the required methods and expected behaviour and xcb/xconn.rs for the
     // implementation of XcbConnection.
     let conn = XcbConnection::new()?;
-    conn.set_root_window_name("HWM - Heiko's X Window Manager in Rust");
+    conn.set_root_window_name("HWM - Heiko's X Window Manager in Rust")
+        .expect("could not set root window name");
 
     // Create the WindowManager instance with the config we have built and a connection to the X
     // server. Before calling grab_keys_and_run, it is possible to run additional start-up actions
