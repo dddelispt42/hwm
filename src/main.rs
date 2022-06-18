@@ -105,9 +105,12 @@ fn main() -> Result<()> {
 
     // NOTE: change these to programs that you have installed!
     // TODO: read env variable ($TERMINAL) for the following
-    let my_program_launcher = "rofi -show combi";
+    // let my_program_launcher = "rofi -show combi";
+    let my_program_launcher = "rofi -show run";
     let my_terminal = "alacritty";
     let my_file_manager = "alacritty -e lf";
+    let my_rss_reader = "alacritty -e news";
+    let my_top = "alacritty -e btop";
     let my_browser = "qutebrowser";
 
     /* hooks
@@ -214,8 +217,8 @@ fn main() -> Result<()> {
          "M-Print" => run_external!("screenshot_menu");
          "M-S-Print" => run_external!("screenshot_menu -s");
          // "M-S-w" => run_external!(format!("{} -e sudo nmtui", TERMINAL));
-         // "M-r" => run_external!(format!("{} -e lf", TERMINAL));
-         // "M-S-r" => run_external!(format!("{} -e htop", TERMINAL));
+         "M-r" => run_external!(my_rss_reader);
+         "M-t" => run_external!(my_top);
 
          // workspace management
          "M-Tab" => run_internal!(toggle_workspace);
