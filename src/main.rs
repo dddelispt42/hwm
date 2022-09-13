@@ -216,6 +216,7 @@ fn main() -> Result<()> {
          "M-S-period" => run_external!("nerdfont_menu");
          "M-Print" => run_external!("screenshot_menu");
          "M-S-Print" => run_external!("screenshot_menu -s");
+         "M-a" => run_external!("rofi-pass");
          // "M-S-w" => run_external!(format!("{} -e sudo nmtui", TERMINAL));
          "M-r" => run_external!(my_rss_reader);
          "M-t" => run_external!(my_top);
