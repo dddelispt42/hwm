@@ -111,6 +111,7 @@ fn main() -> Result<()> {
     let my_file_manager = "alacritty -e lf";
     let my_rss_reader = "alacritty -e news";
     let my_top = "alacritty -e btop";
+    let my_music = "alacritty -e termusic";
     let my_browser = "qutebrowser";
 
     /* hooks
@@ -211,7 +212,7 @@ fn main() -> Result<()> {
          "M-c" => run_external!("CM_LAUNCHER=rofi clipmenu");
          "M-w" => run_external!(my_browser);
          "M-b" => run_external!("bluetooth_menu");
-         "M-m" => run_external!("pulsemixer");
+         "M-m" => run_external!(my_music);
          "M-period" => run_external!("rofimenu");
          "M-S-period" => run_external!("nerdfont_menu");
          "M-Print" => run_external!("screenshot_menu");
@@ -219,7 +220,8 @@ fn main() -> Result<()> {
          "M-a" => run_external!("rofi-pass");
          // "M-S-w" => run_external!(format!("{} -e sudo nmtui", TERMINAL));
          "M-r" => run_external!(my_rss_reader);
-         "M-t" => run_external!(my_top);
+         "M-t" => run_external!("term_menu");
+         "M-S-t" => run_external!(my_top);
 
          // workspace management
          "M-Tab" => run_internal!(toggle_workspace);
