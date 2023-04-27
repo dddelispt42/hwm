@@ -107,11 +107,11 @@ fn main() -> Result<()> {
     // TODO: read env variable ($TERMINAL) for the following
     // let my_program_launcher = "rofi -show combi";
     let my_program_launcher = "rofi -show run";
-    let my_terminal = "alacritty";
-    let my_file_manager = "alacritty -e lf";
-    let my_rss_reader = "alacritty -e news";
-    let my_top = "alacritty -e btop";
-    let my_music = "alacritty -e termusic";
+    let my_terminal = "st";
+    let my_file_manager = "st -e lf";
+    let my_rss_reader = "st -e news";
+    let my_top = "st -e btop";
+    let my_music = "st -e termusic";
     let my_browser = "qutebrowser";
 
     /* hooks
@@ -163,20 +163,20 @@ fn main() -> Result<()> {
         SpawnRule::ClassName("qutebrowser", 4),
         SpawnRule::ClassName("Thunderbird", 3),
         SpawnRule::ClassName("anki", 2),
-        SpawnRule::WMName("alacritty - heiko@ed", 1),
-        SpawnRule::WMName("alacritty - heiko@ed2", 1),
-        SpawnRule::WMName("alacritty - heiko@backup", 1),
-        SpawnRule::WMName("alacritty - heiko@localhost", 0),
+        SpawnRule::WMName("st - heiko@ed", 1),
+        SpawnRule::WMName("st - heiko@ed2", 1),
+        SpawnRule::WMName("st - heiko@backup", 1),
+        SpawnRule::WMName("st - heiko@localhost", 0),
     ]));
 
     // Scratchpad is an extension: it makes use of the same Hook points as the examples above but
     // additionally provides a 'toggle' method that can be bound to a key combination in order to
     // trigger the bound scratchpad client.
-    let sp = Scratchpad::new("alacritty", 0.8, 0.8);
+    let sp = Scratchpad::new("st", 0.8, 0.8);
     hooks.push(sp.get_hook());
-    let sp2 = Scratchpad::new("alacritty", 0.8, 0.8);
+    let sp2 = Scratchpad::new("st", 0.8, 0.8);
     hooks.push(sp2.get_hook());
-    let sp3 = Scratchpad::new("alacritty", 0.8, 0.8);
+    let sp3 = Scratchpad::new("st", 0.8, 0.8);
     hooks.push(sp3.get_hook());
 
     /* The gen_keybindings macro parses user friendly key binding definitions into X keycodes and
