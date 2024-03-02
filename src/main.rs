@@ -118,7 +118,7 @@ fn main() -> Result<()> {
      *
      * penrose provides several hook points where you can run your own code as part of
      * WindowManager methods. This allows you to trigger custom code without having to use a key
-     * binding to do so. See the hooks module in the docs for details of what hooks are avaliable
+     * binding to do so. See the hooks module in the docs for details of what hooks are available
      * and when/how they will be called. Note that each class of hook will be called in the order
      * that they are defined. Hooks may maintain their own internal state which they can use to
      * modify their behaviour if desired.
