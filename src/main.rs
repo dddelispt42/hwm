@@ -1,286 +1,337 @@
-/**
-* My personal minimal X.org Tiling Window Manager written in Rust.
-* Author: Heiko Riemer - mail@eheiko.net
- */
-#[macro_use]
-extern crate penrose;
-
+//! penrose :: EWMH support
+//!
+//! It is possible to add EWMH support to penrose via an extension. This provides
+//! information to external utilities such as panels and statusbars so that they
+//! are able to interact with the window manager.
+//!
+//! `penrose::extensions::hooks::add_ewmh_hooks` can be used to compose the required
+//! hooks into your existing Config before starting the window manager. If you want
+//! to modify the support, each of the individual hooks can be found in
+//! `penrose::extensions::hooks::ewmh`.
 use penrose::{
-    contrib::{
-        extensions::Scratchpad,
-        hooks::{ActiveClientAsRootName, ClientSpawnRules, SpawnRule},
-        layouts::paper,
+    builtin::{
+        actions::{
+            exit,
+            floating::{float_focused, reposition, resize, sink_all, sink_focused},
+            key_handler, log_current_state, modify_with, send_layout_message, spawn,
+        },
+        hooks::SpacingHook,
+        layout::{
+            messages::{ExpandMain, IncMain, ShrinkMain},
+            transformers::{Gaps, ReflectHorizontal, ReserveTop},
+            CenteredMain, Grid, MainAndStack, Monocle,
+        },
     },
     core::{
-        config::Config,
-        helpers::spawn,
-        hooks::Hook,
-        layout::{bottom_stack, monocle, side_stack, Layout, LayoutConf},
-        manager::WindowManager,
-        ring::Selector,
-        xconnection::{XConn, Xid},
+        bindings::{parse_keybindings_with_xmodmap, KeyEventHandler},
+        layout::{Layout, LayoutStack},
+        Config, State, WindowManager,
     },
-    logging_error_handler,
-    xcb::{XcbConnection, XcbHooks},
-    Backward, Forward, Less, More, Result,
-    __test_helpers::index_selectors,
+    extensions::{
+        hooks::{
+            add_ewmh_hooks, add_named_scratchpads,
+            manage::{FloatingCentered, SetWorkspace},
+            NamedScratchPad, SpawnOnStartup, ToggleNamedScratchPad,
+        },
+        layout::{Conditional, Fibonacci, Tatami},
+    },
+    manage_hooks, map, stack,
+    x::{query::ClassName, XConn, XConnExt},
+    x11rb::RustConn,
+    Xid,
 };
-
-use simplelog::{LevelFilter, SimpleLogger};
 use std::collections::HashMap;
-use tracing::info;
+use tracing_subscriber::{self, reload::Handle, EnvFilter};
 
-// An example of a simple custom hook. In this case we are creating a NewClientHook which will
-// be run each time a new client program is spawned.
-struct MyClientHook {}
-impl<X: XConn> Hook<X> for MyClientHook {
-    fn new_client(&mut self, wm: &mut WindowManager<X>, id: Xid) -> Result<()> {
-        let c = wm.client(&Selector::WinId(id)).unwrap();
-        info!("new client with WM_CLASS='{}'", c.wm_class());
-        Ok(())
-    }
+pub type KeyHandler = Box<dyn KeyEventHandler<RustConn>>;
+
+pub const FONT: &str = "FiraCode Nerd Font Mono";
+pub const BLACK: u32 = 0x282828ff;
+pub const WHITE: u32 = 0xebdbb2ff;
+pub const GREY: u32 = 0x3c3836ff;
+pub const BLUE: u32 = 0x458588ff;
+
+pub const MAX_MAIN: u32 = 1;
+pub const RATIO: f32 = 0.6;
+pub const RATIO_STEP: f32 = 0.1;
+pub const OUTER_PX: u32 = 5;
+pub const INNER_PX: u32 = 5;
+pub const BAR_HEIGHT_PX: u32 = 18;
+pub const MAX_ACTIVE_WINDOW_CHARS: usize = 50;
+
+pub const DEBUG_ENV_VAR: &str = "PENROSE_DEBUG";
+
+// Delta for moving / resizing floating windows
+const DELTA: i32 = 10;
+
+pub const MON_1: &str = "eDP-1";
+pub const MON_2: &str = "HDMI-2";
+
+struct StickyClientState(Vec<Xid>);
+
+pub fn add_sticky_client_state<X>(mut wm: WindowManager<X>) -> WindowManager<X>
+where
+    X: XConn + 'static,
+{
+    wm.state.add_extension(StickyClientState(Vec::new()));
+    // wm.state.config.compose_or_set_refresh_hook(refresh_hook);
+
+    wm
 }
 
-fn main() -> Result<()> {
-    // penrose will log useful information about the current state of the WindowManager during
-    // normal operation that can be used to drive scripts and related programs. Additional debug
-    // output can be helpful if you are hitting issues.
-    SimpleLogger::init(LevelFilter::Debug, simplelog::Config::default())
-        .expect("failed to init logging");
+// fn refresh_hook<X: XConn>(state: &mut State<X>, x: &X) -> Result<()> {
+//     let s = state.extension::<StickyClientState>()?;
+//     let t = state.client_set.current_tag().to_string();
+//     let mut need_refresh = false;
+//
+//     // clear out any clients we were tracking that are no longer in state
+//     s.borrow_mut().0.retain(|id| state.client_set.contains(id));
+//
+//     for client in s.borrow().0.iter() {
+//         if state.client_set.tag_for_client(client) != Some(&t) {
+//             state.client_set.move_client_to_tag(client, &t);
+//             need_refresh = true;
+//         }
+//     }
+//
+//     // we guard against refreshing only when clients were on the wrong screen
+//     // so that we don't get into an infinite loop from calling refresh from
+//     // inside of a refresh hook
+//     if need_refresh {
+//         x.refresh(state)?;
+//     }
+//
+//     Ok(())
+// }
 
-    // Created at startup. See keybindings below for how to access them
-    let mut config_builder = Config::default().builder();
-    config_builder
-        .workspaces(vec!["1", "2", "3", "4", "5", "6", "7", "8", "9"])
-        // Windows with a matching WM_CLASS will always float
-        .floating_classes(vec![
-            "Xnest",
-            "copyq",
-            "dmenu",
-            "dunst",
-            "onboard",
-            "pinentry-gtk-2",
-            "polybar",
-            "rofi",
-        ])
-        // Client border colors are set based on X focus
-        .border_px(4)
-        .gap_px(0)
-        .top_bar(true)
-        .bar_height(31)
-        .focused_border("#458588")
-        .expect("could not set focus border color")
-        .unfocused_border("#282828")
-        .expect("could not set unfocus border color");
+pub fn toggle_sticky_client() -> KeyHandler {
+    key_handler(|state, x: &RustConn| {
+        let _s = state.extension::<StickyClientState>()?;
+        let mut s = _s.borrow_mut();
 
-    // When specifying a layout, most of the time you will want LayoutConf::default() as shown
-    // below, which will honour gap settings and will not be run on focus changes (only when
-    // clients are added/removed). To customise when/how each layout is applied you can create a
-    // LayoutConf instance with your desired properties enabled.
-    let follow_focus_conf = LayoutConf {
-        floating: false,
-        gapless: true,
-        follow_focus: true,
-        allow_wrapping: false,
+        if let Some(&id) = state.client_set.current_client() {
+            if s.0.contains(&id) {
+                s.0.retain(|&elem| elem != id);
+            } else {
+                s.0.push(id);
+            }
+
+            drop(s);
+            x.refresh(state)?;
+        }
+
+        Ok(())
+    })
+}
+
+// Generate a raw key binding map in terms of parsable string key bindings rather than resolved key codes
+pub fn raw_key_bindings<L, S>(
+    toggle_scratch: ToggleNamedScratchPad,
+    toggle_scratch_py: ToggleNamedScratchPad,
+    handle: Handle<L, S>,
+) -> HashMap<String, KeyHandler>
+where
+    L: From<EnvFilter> + 'static,
+    S: 'static,
+{
+    let mut raw_bindings = map! {
+        map_keys: |k: &str| k.to_owned();
+
+        // Windows
+        "M-j" => modify_with(|cs| cs.focus_down()),
+        "M-k" => modify_with(|cs| cs.focus_up()),
+        "M-S-j" => modify_with(|cs| cs.swap_down()),
+        "M-S-k" => modify_with(|cs| cs.swap_up()),
+        "M-space" => modify_with(|cs| cs.swap_focus_and_head()),
+        "M-C-space" => modify_with(|cs| cs.rotate_focus_to_head()),
+        "M-q" => modify_with(|cs| cs.kill_focused()),
+
+        // Workspaces
+        "M-Tab" => modify_with(|cs| cs.toggle_tag()),
+        "M-bracketright" => modify_with(|cs| cs.next_screen()),
+        "M-bracketleft" => modify_with(|cs| cs.previous_screen()),
+        "M-S-bracketright" => modify_with(|cs| cs.drag_workspace_forward()),
+        "M-S-bracketleft" => modify_with(|cs| cs.drag_workspace_backward()),
+
+        // Layouts
+        "M-grave" => modify_with(|cs| cs.next_layout()),
+        "M-S-grave" => modify_with(|cs| cs.previous_layout()),
+        "M-S-Up" => send_layout_message(|| IncMain(1)),
+        "M-S-Down" => send_layout_message(|| IncMain(-1)),
+        "M-S-Right" => send_layout_message(|| ExpandMain),
+        "M-S-Left" => send_layout_message(|| ShrinkMain),
+
+        // Launchers
+        "M-Print" => spawn("screenshot_menu"),
+        "M-S-Print" => spawn("screenshot_menu -s"),
+        "M-S-f" => spawn("st -e lf"),
+        "M-c" => spawn("CM_LAUNCHER=rofi clipmenu"),
+        "M-w" => spawn("qutebrowser"),
+        "M-b" => spawn("bluethooth_menu"),
+        "M-m" => spawn("st -e termusic"),
+        "M-a" => spawn("rofi-pass"),
+        "M-n" => spawn("st -e news"),
+        "M-S-t" => spawn("st -e btop"),
+        "M-S-x" => spawn("xrandr_menu"),
+        "M-t" => spawn("term_menu"),
+        "M-period" => spawn("rofimenu"),
+        "M-S-period" => spawn("nerdfont_menu"),
+        "M-semicolon" => spawn("rofi -show run"),
+        "M-S-q" => spawn("exit_menu"),
+        "M-d" => spawn("rofi -show run"),
+        "M-Return" => spawn("st"),
+        "M-A-w" => spawn("floating-webcam"),
+        "M-S-Return" => Box::new(toggle_scratch),
+        "M-C-Return" => Box::new(toggle_scratch_py),
+
+        // Session management
+        "M-A-l" => spawn("xflock4"),
+        // "M-A-Escape" => power_menu(),
+
+        "M-C-t" => toggle_sticky_client(),
+
+        // Floating management
+        "M-C-f" => float_focused(),
+        "M-C-s" => sink_focused(),
+        "M-C-S-s" => sink_all(),
+        // Floating resize
+        "M-C-Right" => resize(DELTA, 0),
+        "M-C-Left" => resize(-DELTA, 0),
+        "M-C-Up" => resize(0, -DELTA),
+        "M-C-Down" => resize(0, DELTA),
+        // Floating position
+        "M-C-l" => reposition(DELTA, 0),
+        "M-C-h" => reposition(-DELTA, 0),
+        "M-C-k" => reposition(0, -DELTA),
+        "M-C-j" => reposition(0, DELTA),
+
+        // Debugging
+        // "M-A-t" => set_tracing_filter(handle),
+        "M-A-d" => log_current_state(),
     };
 
-    // Default number of clients in the main layout area
-    let n_main = 1;
+    for tag in &["1", "2", "3", "4", "5", "6", "7", "8", "9"] {
+        raw_bindings.extend([
+            (
+                format!("M-{tag}"),
+                modify_with(move |client_set| client_set.pull_tag_to_screen(tag)),
+            ),
+            (
+                format!("M-S-{tag}"),
+                modify_with(move |client_set| client_set.move_focused_to_tag(tag)),
+            ),
+        ]);
+    }
 
-    // Default percentage of the screen to fill with the main area of the layout
-    let ratio = 0.6;
+    raw_bindings
+}
 
-    // Layouts to be used on each workspace. Currently all workspaces have the same set of Layouts
-    // available to them, though they track modifications to n_main and ratio independently.
-    config_builder.layouts(vec![
-        Layout::new("[side]", LayoutConf::default(), side_stack, n_main, ratio),
-        Layout::new("[mono]", LayoutConf::default(), monocle, n_main, ratio),
-        Layout::new("[botm]", LayoutConf::default(), bottom_stack, n_main, ratio),
-        Layout::new("[papr]", follow_focus_conf, paper, n_main, ratio),
-        Layout::floating("[----]"),
-    ]);
+fn layouts() -> LayoutStack {
+    stack!(
+        flex_tall(),
+        flex_wide(),
+        MainAndStack::side(MAX_MAIN, RATIO, RATIO_STEP),
+        ReflectHorizontal::wrap(MainAndStack::side(MAX_MAIN, RATIO, RATIO_STEP)),
+        MainAndStack::bottom(MAX_MAIN, RATIO, RATIO_STEP),
+        Tatami::boxed(RATIO, RATIO_STEP),
+        Fibonacci::boxed(MAX_MAIN, RATIO, RATIO_STEP),
+        Grid::boxed(),
+        Monocle::boxed()
+    )
+    .map(|layout| ReserveTop::wrap(Gaps::wrap(layout, OUTER_PX, INNER_PX), BAR_HEIGHT_PX))
+}
 
-    // Now build and validate the config
-    let config = config_builder.build().unwrap();
+fn flex_tall() -> Box<dyn Layout> {
+    Conditional::boxed(
+        "FlexTall",
+        MainAndStack::side_unboxed(MAX_MAIN, RATIO, RATIO_STEP, false),
+        CenteredMain::vertical_unboxed(MAX_MAIN, RATIO, RATIO_STEP),
+        |_, r| r.w <= 1400,
+    )
+}
 
-    // NOTE: change these to programs that you have installed!
-    // TODO: read env variable ($TERMINAL) for the following
-    // let my_program_launcher = "rofi -show combi";
-    let my_program_launcher = "rofi -show run";
-    let my_terminal = "st";
-    let my_file_manager = "st -e lf";
-    let my_rss_reader = "st -e news";
-    let my_top = "st -e btop";
-    let my_music = "st -e termusic";
-    let my_browser = "qutebrowser";
+fn flex_wide() -> Box<dyn Layout> {
+    Conditional::boxed(
+        "FlexWide",
+        MainAndStack::bottom_unboxed(MAX_MAIN, RATIO, RATIO_STEP, false),
+        CenteredMain::horizontal_unboxed(MAX_MAIN, RATIO, RATIO_STEP),
+        |_, r| r.w <= 1400,
+    )
+}
 
-    /* hooks
-     *
-     * penrose provides several hook points where you can run your own code as part of
-     * WindowManager methods. This allows you to trigger custom code without having to use a key
-     * binding to do so. See the hooks module in the docs for details of what hooks are available
-     * and when/how they will be called. Note that each class of hook will be called in the order
-     * that they are defined. Hooks may maintain their own internal state which they can use to
-     * modify their behaviour if desired.
-     */
-    let mut hooks: XcbHooks = vec![];
-    hooks.push(Box::new(MyClientHook {}));
+fn main() -> anyhow::Result<()> {
+    // NOTE: Setting up tracing with dynamic filter updating inline as getting the type for
+    // the reload Handle to work is a massive pain... this really should be in its own method
+    // somewhere as the example here: https://github.com/tokio-rs/tracing/blob/master/examples/examples/tower-load.rs
+    // _really_ seems to show that Handle only has a single type param, but when I try it in here
+    // it complains about needing a second (phantom data) param as well?
+    let tracing_builder = tracing_subscriber::fmt()
+        // .json() // JSON logs
+        // .flatten_event(true)
+        .with_env_filter("info")
+        .with_filter_reloading();
 
-    // Using a simple contrib hook that takes no config. By convention, contrib hooks have a 'new'
-    // method that returns a boxed instance of the hook with any configuration performed so that it
-    // is ready to push onto the corresponding *_hooks vec.
-    hooks.push(ActiveClientAsRootName::new());
+    let reload_handle = tracing_builder.reload_handle();
+    // tracing_builder.finish().init();
 
-    // Here we are using a contrib hook that requires configuration to set up a default workspace
-    // on workspace "9". This will set the layout and spawn the supplied programs if we make
-    // workspace "9" active while it has no clients.
-    // hooks.push(DefaultWorkspace::new(
-    //	 "1",
-    //	 "[side]",
-    //	 vec!["st -c \"st - heiko@ed\" -T \"st - heiko@ed\""],
-    // ));
-    // hooks.push(DefaultWorkspace::new(
-    //	 "2",
-    //	 "[side]",
-    //	 vec!["st -c \"st - heiko@localhost\" -T \"st - heiko@localhost\""],
-    // ));
-    // hooks.push(DefaultWorkspace::new(
-    //	 "3",
-    //	 "[side]",
-    //	 vec!["st -c \"st - heiko@lab\" -T \"st - heiko@lab\""],
-    // ));
-    // hooks.push(DefaultWorkspace::new("4", "[side]", vec!["firefox"]));
-    // hooks.push(DefaultWorkspace::new("5", "[side]", vec!["signal-desktop"]));
-    // hooks.push(DefaultWorkspace::new("6", "[side]", vec![my_browser]));
-
-    // spawn rules
-    hooks.push(ClientSpawnRules::new(vec![
-        SpawnRule::ClassName("Tor Browser", 0),
-        SpawnRule::ClassName("brave-browser", 3),
-        SpawnRule::ClassName("firefox", 3),
-        SpawnRule::ClassName("gimp", 8),
-        SpawnRule::ClassName("signal", 4),
-        SpawnRule::ClassName("qutebrowser", 4),
-        SpawnRule::ClassName("Thunderbird", 3),
-        SpawnRule::ClassName("anki", 2),
-        SpawnRule::WMName("st - heiko@ed", 1),
-        SpawnRule::WMName("st - heiko@ed2", 1),
-        SpawnRule::WMName("st - heiko@backup", 1),
-        SpawnRule::WMName("st - heiko@localhost", 0),
-    ]));
-
-    // Scratchpad is an extension: it makes use of the same Hook points as the examples above but
-    // additionally provides a 'toggle' method that can be bound to a key combination in order to
-    // trigger the bound scratchpad client.
-    let sp = Scratchpad::new("st", 0.8, 0.8);
-    hooks.push(sp.get_hook());
-    let sp2 = Scratchpad::new("st", 0.8, 0.8);
-    hooks.push(sp2.get_hook());
-    let sp3 = Scratchpad::new("st", 0.8, 0.8);
-    hooks.push(sp3.get_hook());
-
-    /* The gen_keybindings macro parses user friendly key binding definitions into X keycodes and
-     * modifier masks. It uses the 'xmodmap' program to determine your current keymap and create
-     * the bindings dynamically on startup. If this feels a little too magical then you can
-     * alternatively construct a  HashMap<KeyCode, FireAndForget> manually with your chosen
-     * keybindings (see helpers.rs and data_types.rs for details).
-     * FireAndForget functions do not need to make use of the mutable WindowManager reference they
-     * are passed if it is not required: the run_external macro ignores the WindowManager itself
-     * and instead spawns a new child process.
-     */
-    let key_bindings = gen_keybindings! {
-         // Program launch
-         "M-semicolon" => run_external!(my_program_launcher);
-         "M-d" => run_external!(my_program_launcher);
-         "M-Return" => run_external!(my_terminal);
-         "M-S-f" => run_external!(my_file_manager);
-         "M-S-Return" => sp.toggle();
-         "M-C-Return" => sp2.toggle();
-         "M-A-Return" => sp3.toggle();
-
-         // client management
-         "M-j" => run_internal!(cycle_client, Forward);
-         "M-k" => run_internal!(cycle_client, Backward);
-         "M-S-j" => run_internal!(drag_client, Forward);
-         "M-S-k" => run_internal!(drag_client, Backward);
-         "M-q" => run_internal!(kill_client);
-         "M-f" => run_internal!(toggle_client_fullscreen, &Selector::Focused);
-
-         // applications
-         "M-S-q" => run_external!("exit_menu");
-         // "M-c" => run_external!("st -e clipmenu");
-         "M-c" => run_external!("CM_LAUNCHER=rofi clipmenu");
-         "M-w" => run_external!(my_browser);
-         "M-b" => run_external!("bluetooth_menu");
-         "M-m" => run_external!(my_music);
-         "M-period" => run_external!("rofimenu");
-         "M-S-period" => run_external!("nerdfont_menu");
-         "M-Print" => run_external!("screenshot_menu");
-         "M-S-Print" => run_external!("screenshot_menu -s");
-         "M-a" => run_external!("rofi-pass");
-         // "M-S-w" => run_external!(format!("{} -e sudo nmtui", TERMINAL));
-         "M-r" => run_external!(my_rss_reader);
-         "M-t" => run_external!("term_menu");
-         "M-S-t" => run_external!(my_top);
-
-         // workspace management
-         "M-Tab" => run_internal!(toggle_workspace);
-         "M-p" => run_internal!(cycle_screen, Forward);
-         "M-n" => run_internal!(cycle_screen, Backward);
-         "M-S-p" => run_internal!(drag_workspace, Forward);
-         "M-S-n" => run_internal!(drag_workspace, Backward);
-
-         // Layout management
-         "M-l" => run_internal!(cycle_layout, Forward);
-         "M-S-l" => run_internal!(cycle_layout, Backward);
-         "M-A-Up" => run_internal!(update_max_main, More);
-         "M-A-Down" => run_internal!(update_max_main, Less);
-         "M-A-Right" => run_internal!(update_main_ratio, More);
-         "M-A-Left" => run_internal!(update_main_ratio, Less);
-
-         "M-x" => run_internal!(detect_screens);
-         "M-S-x" => run_external!("xrandr_menu");
-         "M-A-Escape" => run_internal!(exit);
-
-         // refmap [ config.ws_range() ] in {
-         //       "M-{}" => focus_workspace [ index_selectors(config.workspaces().len()) ];
-         //       "M-S-{}" => client_to_workspace [ index_selectors(config.workspaces().len()) ];
-         // };
-         map: { "1", "2", "3", "4", "5", "6", "7", "8", "9" } to index_selectors(9) => {
-            "M-{}" => focus_workspace (REF);
-            "M-S-{}" => client_to_workspace (REF);
-        };
-
+    let startup_hook = SpawnOnStartup::boxed("/usr/local/scripts/penrose-startup.sh");
+    let manage_hook = manage_hooks![
+        ClassName("floatTerm") => FloatingCentered::new(0.8, 0.6),
+        ClassName("Xnest") => FloatingCentered::new(0.8, 0.6),
+        ClassName("copyq") => FloatingCentered::new(0.8, 0.6),
+        ClassName("dmenu") => FloatingCentered::new(0.8, 0.6),
+        ClassName("dunst") => FloatingCentered::new(0.8, 0.6),
+        ClassName("onboard") => FloatingCentered::new(0.8, 0.6),
+        ClassName("pinentry-gtk-2") => FloatingCentered::new(0.8, 0.6),
+        ClassName("polybar") => FloatingCentered::new(0.8, 0.6),
+        ClassName("floatTerm") => FloatingCentered::new(0.8, 0.6),
+        ClassName("rofi")  => SetWorkspace("9"),
+    ];
+    let layout_hook = SpacingHook {
+        inner_px: INNER_PX,
+        outer_px: OUTER_PX,
+        top_px: BAR_HEIGHT_PX,
+        bottom_px: 0,
     };
 
-    // The underlying connection to the X server is handled as a trait: XConn. XcbConnection is the
-    // reference implementation of this trait that uses the XCB library to communicate with the X
-    // server. You are free to provide your own implementation if you wish, see xconnection.rs for
-    // details of the required methods and expected behaviour and xcb/xconn.rs for the
-    // implementation of XcbConnection.
-    let conn = XcbConnection::new()?;
-    conn.set_root_window_name("HWM - Heiko's X Window Manager in Rust")
-        .expect("could not set root window name");
+    let config = add_ewmh_hooks(Config {
+        default_layouts: layouts(),
+        floating_classes: vec!["mpv-float".to_owned()],
+        manage_hook: Some(manage_hook),
+        startup_hook: Some(startup_hook),
+        layout_hook: Some(Box::new(layout_hook)),
+        ..Config::default()
+    });
 
-    // Create the WindowManager instance with the config we have built and a connection to the X
-    // server. Before calling grab_keys_and_run, it is possible to run additional start-up actions
-    // such as configuring initial WindowManager state, running custom code / hooks or spawning
-    // external processes such as a start-up script.
-    let mut wm = WindowManager::new(config, conn, hooks, logging_error_handler());
-    wm.init()?;
+    // Create a new named scratchpad and toggle handle for use in keybindings.
+    let (nsp, toggle_scratch) = NamedScratchPad::new(
+        "terminal",
+        "st -c StScratchpad",
+        ClassName("StScratchpad"),
+        FloatingCentered::new(0.8, 0.8),
+        true,
+    );
 
-    // NOTE: If you are using the default XCB backend provided in the penrose xcb module, then the
-    //		construction of the XcbConnection and resulting WindowManager can be done using the
-    //		new_xcb_backed_window_manager helper function like so:
-    //
-    // let mut wm = new_xcb_backed_window_manager(config)?;
+    let (nsp_py, toggle_scratch_py) = NamedScratchPad::new(
+        "qt-console",
+        "jupyter-qtconsole",
+        ClassName("jupyter-qtconsole"),
+        FloatingCentered::new(0.8, 0.8),
+        true,
+    );
 
-    spawn("/home/heiko/.config/dwm/autostart.sh")?;
+    let conn = RustConn::new()?;
+    let raw_bindings = raw_key_bindings(toggle_scratch, toggle_scratch_py, reload_handle);
+    let key_bindings = parse_keybindings_with_xmodmap(raw_bindings)?;
 
-    // grab_keys_and_run will start listening to events from the X server and drop into the main
-    // event loop. From this point on, program control passes to the WindowManager so make sure
-    // that any logic you wish to run is done before here!
-    wm.grab_keys_and_run(key_bindings, HashMap::new())?;
+    // Initialise the required state extension and hooks for handling the named scratchpad
+    let wm = add_sticky_client_state(add_named_scratchpads(
+        WindowManager::new(config, key_bindings, HashMap::new(), conn)?,
+        vec![nsp, nsp_py],
+    ));
+
+    wm.run()?;
 
     Ok(())
 }
+

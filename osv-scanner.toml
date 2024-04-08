@@ -1,22 +1,4 @@
 [[IgnoredVulns]]
-id = "RUSTSEC-2020-0097"
-ignoreUntil = 2023-08-08
-reason = "FIXME: too risky to fix in V19.10.x"
-
-[[IgnoredVulns]]
-id = "RUSTSEC-2021-0119"
-
-[[IgnoredVulns]]
-id = "RUSTSEC-2021-0019"
-ignoreUntil = 2023-08-08
-reason = "FIXME: too risky to fix in V19.10.x"
-
-[[IgnoredVulns]]
-id = "GHSA-wgrg-5h56-jg27"
-ignoreUntil = 2023-08-08
-reason = "FIXME: too risky to fix in V19.10.x"
-
-[[IgnoredVulns]]
-id = "GHSA-76w9-p8mg-j927"
-ignoreUntil = 2023-08-08
+id = "RUSTSEC-2021-0065"
+ignoreUntil = 2024-08-08
 reason = "FIXME: too risky to fix in V19.10.x"
