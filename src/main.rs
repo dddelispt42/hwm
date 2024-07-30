@@ -154,6 +154,8 @@ where
         "M-S-bracketleft" => modify_with(|cs| cs.drag_workspace_backward()),
 
         // Layouts
+        "M-up" => modify_with(|cs| cs.next_layout()),
+        "M-down" => modify_with(|cs| cs.previous_layout()),
         "M-grave" => modify_with(|cs| cs.next_layout()),
         "M-S-grave" => modify_with(|cs| cs.previous_layout()),
         "M-S-Up" => send_layout_message(|| IncMain(1)),
@@ -274,18 +276,18 @@ fn main() -> anyhow::Result<()> {
     let reload_handle = tracing_builder.reload_handle();
     // tracing_builder.finish().init();
 
-    let startup_hook = SpawnOnStartup::boxed("/usr/local/scripts/penrose-startup.sh");
+    let startup_hook = SpawnOnStartup::boxed("/home/heiko/.config/dwm/autostart.sh");
     let manage_hook = manage_hooks![
-        ClassName("floatTerm") => FloatingCentered::new(0.8, 0.6),
+        //ClassName("floatTerm") => FloatingCentered::new(0.8, 0.6),
         ClassName("Xnest") => FloatingCentered::new(0.8, 0.6),
         ClassName("copyq") => FloatingCentered::new(0.8, 0.6),
         ClassName("dmenu") => FloatingCentered::new(0.8, 0.6),
-        ClassName("dunst") => FloatingCentered::new(0.8, 0.6),
-        ClassName("onboard") => FloatingCentered::new(0.8, 0.6),
-        ClassName("pinentry-gtk-2") => FloatingCentered::new(0.8, 0.6),
-        ClassName("polybar") => FloatingCentered::new(0.8, 0.6),
+        //ClassName("dunst") => FloatingCentered::new(0.8, 0.6),
+        //ClassName("onboard") => FloatingCentered::new(0.8, 0.6),
+        //ClassName("pinentry-gtk-2") => FloatingCentered::new(0.8, 0.6),
+        //ClassName("polybar") => FloatingCentered::new(0.8, 0.6),
         ClassName("floatTerm") => FloatingCentered::new(0.8, 0.6),
-        ClassName("rofi")  => SetWorkspace("9"),
+        //ClassName("rofi")  => SetWorkspace("9"),
     ];
     let layout_hook = SpacingHook {
         inner_px: INNER_PX,
