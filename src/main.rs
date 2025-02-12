@@ -45,7 +45,8 @@ use tracing_subscriber::{self, reload::Handle, EnvFilter};
 
 pub type KeyHandler = Box<dyn KeyEventHandler<RustConn>>;
 
-pub const FONT: &str = "FiraCode Nerd Font Mono";
+//pub const FONT: &str = "FiraCode Nerd Font Mono";
+pub const FONT: &str = "Inconsolata";
 pub const BLACK: u32 = 0x282828ff;
 pub const WHITE: u32 = 0xebdbb2ff;
 pub const GREY: u32 = 0x3c3836ff;

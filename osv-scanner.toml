@@ -1,4 +1,4 @@
 [[IgnoredVulns]]
 id = "RUSTSEC-2021-0065"
-ignoreUntil = 2024-08-08
+ignoreUntil = 2025-08-08
 reason = "FIXME: too risky to fix in V19.10.x"
